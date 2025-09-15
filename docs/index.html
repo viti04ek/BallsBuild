@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport"content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimal-ui, viewport-fit=cover" />
+  <title>Balls</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+
+<body>
+  <div id="unity-container">
+    <div id="stage">
+      <canvas id="unity-canvas"></canvas>
+
+      <div id="loader">
+        <img id="logo" src="logo.png" alt="Logo" draggable="false" />
+        <div id="progress-bar-wrapper">
+          <div id="bubble-bar" aria-label="Loading progress">
+            <div id="bubble-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          </div>
+          <div id="loading-text">Loading...</div>
+        </div>
+      </div>
+
+      <div id="error-message">Unable to load the game. Please refresh the page.</div>
+    </div>
+  </div>
+
+  <script>
+    const cacheBuster = `?v=${Date.now()}`;
+    document.write(`<script src="Build/Balls.loader.js${cacheBuster}"><\/script>`);
+  </script>
+  <script src="unityLoader.js"></script>
+</body>
+
+</html>

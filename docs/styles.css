@@ -1,0 +1,69 @@
+:root { color-scheme: light dark; }
+html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:'Rubik', system-ui, -apple-system, sans-serif; }
+
+#unity-container{
+  position:fixed; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(120% 120% at 80% 0%, rgba(70,120,255,0.18) 0%, rgba(0,0,0,0) 55%),
+    linear-gradient(135deg, #0a0d29 0%, #0b0a2a 45%, #0c0a25 60%, #091020 100%);
+}
+
+#stage{ position:relative; }
+
+#unity-canvas{
+  width:100%; height:100%; display:block;
+  touch-action:none; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  background: transparent;
+}
+
+/* лоадер поверх сцены */
+#loader{ position:absolute; inset:0; pointer-events:none; }
+#logo{
+  position:absolute; left:50%; top:42%;
+  transform:translate(-50%,-50%);
+  width:40%; max-width:260px; height:auto;
+  filter: drop-shadow(0 0 14px rgba(0,255,255,0.35)) drop-shadow(0 0 4px rgba(0,255,255,0.6));
+  -webkit-user-drag:none;
+}
+
+#progress-bar-wrapper{
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom:6%; width:92%;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  z-index:10;
+}
+#bubble-bar{
+  width:100%; height:28px; padding:4px 12px;
+  border-radius:20px; overflow:hidden;
+  background: rgba(255,255,255,0.06);
+  border:2px solid rgba(120,170,255,0.35);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.65), 0 0 22px rgba(28,120,255,0.18);
+}
+#bubble-track{ height:100%; display:flex; align-items:center; gap:min(10px,1.2vh); }
+
+.bubble{
+  --s: 0;
+  width:20px; height:20px; border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, #9afaff 0%, #3ce6ff 45%, #08c0dd 100%);
+  box-shadow: 0 0 6px rgba(40,240,255,0.9), inset 0 0 8px rgba(10,180,200,0.7);
+  transform: scale(var(--s));
+  opacity: clamp(0, var(--s), 1);
+  transition: transform 180ms ease-out, opacity 120ms linear;
+  will-change: transform, opacity;
+}
+
+#loading-text{
+  font-style:italic; font-weight:800; font-size:clamp(18px, 2.6vh, 32px);
+  color:transparent;
+  background: linear-gradient(180deg, #27EBFC 15%, #FFFFFF 100%);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-stroke: 2px #0b4aa0;
+  text-shadow: 0 2px 30px rgba(39,235,252,0.3);
+}
+
+#error-message{
+  position:absolute; top:40%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(0,0,0,0.8); color:#fff; padding:20px; font-size:16px; border-radius:8px;
+  z-index:10000; display:none; text-align:center; max-width:80%;
+}
