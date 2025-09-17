@@ -5,10 +5,9 @@ const loader = document.getElementById("loader");
 const errorBox = document.getElementById("error-message");
 
 const bubbleTrack = document.getElementById("bubble-track");
-const BUBBLE_COUNT = 12;            // сколько шариков в полосе
+const BUBBLE_COUNT = 12;
 const bubbles = [];
 
-// создать шарики один раз
 for (let i = 0; i < BUBBLE_COUNT; i++) {
   const b = document.createElement("div");
   b.className = "bubble";
@@ -18,7 +17,6 @@ for (let i = 0; i < BUBBLE_COUNT; i++) {
 
 function showError(message){ errorBox.style.display="block"; errorBox.innerHTML=message; }
 
-// Конфиг Unity
 const buildUrl = "Build";
 const config = {
   dataUrl: buildUrl + "/Balls.data",
@@ -34,16 +32,21 @@ const stage  = document.getElementById('stage');
 const ASPECT_DESKTOP = 9 / 18;
 const MAX_H_DESKTOP = 1200;
 
-function getViewportSize(){
-  let vw = window.innerWidth;
-  let vh = window.innerHeight;
+function getViewportSize() {
+  const tg = window.Telegram?.WebApp;
+  const vh =
+    (tg && tg.viewportStableHeight) ||
+    (window.visualViewport && window.visualViewport.height) ||
+    window.innerHeight;
 
-  if (window.Telegram?.WebApp?.viewportStableHeight) {
-    vh = window.Telegram.WebApp.viewportStableHeight;
-  } else if (window.visualViewport) {
-    vh = Math.min(vh, window.visualViewport.height);
-  }
+  const vw = window.innerWidth;
   return { vw, vh };
+}
+
+function getEffectiveDPR() {
+  const scale = window.visualViewport?.scale || 1;
+  const dpr = (window.devicePixelRatio || 1) / scale;
+  return Math.min(dpr, 2);
 }
 
 function isMobileLike(){
@@ -61,32 +64,57 @@ function layoutStage(){
   } else {
     const limitH = Math.min(vh * 0.96, MAX_H_DESKTOP);
     const limitW = vw * 0.96;
-
     let h = Math.min(limitH, limitW / ASPECT_DESKTOP);
     let w = h * ASPECT_DESKTOP;
-
     stage.style.width  = w + 'px';
     stage.style.height = h + 'px';
   }
 
   const r = stage.getBoundingClientRect();
+
   canvas.style.width  = r.width + 'px';
   canvas.style.height = r.height + 'px';
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width  = Math.round(r.width  * dpr);
-  canvas.height = Math.round(r.height * dpr);
+  const dpr = getEffectiveDPR();
+  const w = Math.round(r.width  * dpr);
+  const h = Math.round(r.height * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width  = w;
+    canvas.height = h;
+
+    try {
+      if (unityInstance?.Module?.setCanvasSize) {
+        unityInstance.Module.setCanvasSize(w, h);
+      }
+    } catch {}
+  }
+}
+
+function bounceResize() {
+  layoutStage();
+  setTimeout(layoutStage, 50);
+  setTimeout(layoutStage, 200);
 }
 
 layoutStage();
-window.addEventListener('resize', layoutStage);
-window.addEventListener('orientationchange', layoutStage);
+window.addEventListener('resize', bounceResize);
+window.addEventListener('orientationchange', bounceResize);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) bounceResize(); });
+window.addEventListener('pageshow', bounceResize);
 
 try {
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', bounceResize);
+    visualViewport.addEventListener('scroll', bounceResize);
+  }
+
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-    Telegram.WebApp.onEvent('viewportChanged', layoutStage);
+    requestAnimationFrame(bounceResize);
+    Telegram.WebApp.onEvent('viewportChanged', (e) => {
+      if (!e || e.isStateStable === undefined || e.isStateStable) bounceResize();
+    });
   }
 } catch {}
 
