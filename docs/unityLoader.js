@@ -30,7 +30,7 @@ const config = {
 
 const stage  = document.getElementById('stage');
 const ASPECT_DESKTOP = 9 / 18;
-const MAX_H_DESKTOP = 1200;
+const MAX_H_DESKTOP = 920;
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
@@ -50,7 +50,8 @@ function getEffectiveDPR() {
 }
 
 function isMobileLike(){
-  if (window.Telegram?.WebApp) return !Telegram.WebApp.isDesktop;
+  if (window.Telegram?.WebApp && typeof Telegram.WebApp.isDesktop === 'boolean')
+    return !Telegram.WebApp.isDesktop;
   return matchMedia('(pointer:coarse)').matches || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 }
 
@@ -62,10 +63,14 @@ function layoutStage(){
     stage.style.width  = vw + 'px';
     stage.style.height = vh + 'px';
   } else {
-    const limitH = Math.min(vh * 0.96, MAX_H_DESKTOP);
-    const limitW = vw * 0.96;
+    const padV = 0.02;
+    const padH = 0.02;
+    const limitH = Math.min(vh * (1 - padV*2), MAX_H_DESKTOP);
+    const limitW = vw * (1 - padH*2);
+
     let h = Math.min(limitH, limitW / ASPECT_DESKTOP);
     let w = h * ASPECT_DESKTOP;
+
     stage.style.width  = w + 'px';
     stage.style.height = h + 'px';
   }
