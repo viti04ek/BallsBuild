@@ -93,7 +93,7 @@ function isMobileLike(){
   }
 }*/
 
-function layoutStageBox(){
+function layoutStage(){
   if (isMobileLike()) {
     stage.style.width  = '100vw';
     stage.style.height = '100dvh';
@@ -130,7 +130,7 @@ function syncCanvasBufferToStage(){
 }*/
 
 function bounceResizeStable() {
-  layoutStageBox();
+  layoutStage();
   syncCanvasBufferToStage();
   setTimeout(syncCanvasBufferToStage, 60);
   setTimeout(syncCanvasBufferToStage, 180);
@@ -138,7 +138,7 @@ function bounceResizeStable() {
 }
 
 //layoutStage();
-layoutStageBox();
+layoutStage();
 syncCanvasBufferToStage();
 
 window.addEventListener('resize', bounceResizeStable);
@@ -203,7 +203,7 @@ window.RequestDataFromReact = function() {
 window.addEventListener("load", () => {
   errorBox.style.display = "none";
   //layoutStage();
-  layoutStageBox();
+  layoutStage();
   syncCanvasBufferToStage();
 
   createUnityInstance(canvas, config, (progress) => {
