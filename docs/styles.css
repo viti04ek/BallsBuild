@@ -69,14 +69,13 @@ html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font
 }
 
 :root{
-  --desktop-max-h: 920px;
-  --desktop-pad: 2vh;
+  --desktop-pad: 0vh;
 }
 
 @media (pointer: fine) {
   #stage{
     aspect-ratio: 9 / 18;
-    height: min(calc(100vh - 2*var(--desktop-pad)), var(--desktop-max-h));
+    height: 100dvh;
     width: auto;
     max-width: calc(100vw - 2*var(--desktop-pad));
   }

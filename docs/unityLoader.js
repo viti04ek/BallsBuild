@@ -29,8 +29,8 @@ const config = {
 };
 
 const stage  = document.getElementById('stage');
-const ASPECT_DESKTOP = 9 / 18;
-const MAX_H_DESKTOP = 920;
+const ASPECT_DESKTOP = 9 / 17;
+const PAD_H = 0;
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
@@ -63,16 +63,17 @@ function layoutStage(){
     stage.style.width  = vw + 'px';
     stage.style.height = vh + 'px';
   } else {
-    const padV = 0.02;
-    const padH = 0.02;
-    const limitH = Math.min(vh * (1 - padV*2), MAX_H_DESKTOP);
-    const limitW = vw * (1 - padH*2);
+    let targetH = vh;
+    let targetW = targetH * ASPECT_DESKTOP;
 
-    let h = Math.min(limitH, limitW / ASPECT_DESKTOP);
-    let w = h * ASPECT_DESKTOP;
+    const maxW = vw * (1 - PAD_H*2);
+    if (targetW > maxW) {
+      targetW = maxW;
+      targetH = targetW / ASPECT_DESKTOP;
+    }
 
-    stage.style.width  = w + 'px';
-    stage.style.height = h + 'px';
+    stage.style.width  = `${targetW}px`;
+    stage.style.height = `${targetH}px`;
   }
 
   const r = stage.getBoundingClientRect();
