@@ -28,9 +28,14 @@ const config = {
   productVersion: "1.0"
 };
 
+config.matchWebGLToCanvasSize = false;
+config.devicePixelRatio = 1;
+
 const stage  = document.getElementById('stage');
 const ASPECT_DESKTOP = 10 / 17;
 const PAD_H = 0;
+const REF_W = 540;
+const REF_H = 1080;
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
@@ -93,34 +98,51 @@ function isMobileLike(){
   }
 }*/
 
-function layoutStage(){
-  if (isMobileLike()) {
-    stage.style.width  = '100vw';
-    stage.style.height = '100dvh';
-    return;
-  }
+function layoutStageDesktop(){
   const { vw, vh } = getViewportSize();
-  let targetH = vh;
-  let targetW = targetH * ASPECT_DESKTOP;
+  let h = vh;
+  let w = h * ASPECT_DESKTOP;
   const maxW = vw * (1 - PAD_H*2);
-  if (targetW > maxW) {
-    targetW = maxW;
-    targetH = targetW / ASPECT_DESKTOP;
-  }
-  stage.style.width  = `${targetW}px`;
-  stage.style.height = `${targetH}px`;
+  if (w > maxW) { w = maxW; h = w / ASPECT_DESKTOP; }
+  stage.style.width  = `${w}px`;
+  stage.style.height = `${h}px`;
 }
 
-function syncCanvasBufferToStage(){
-  const r = stage.getBoundingClientRect();
-  const dpr = getEffectiveDPR();
-  const cw = Math.round(r.width  * dpr);
-  const ch = Math.round(r.height * dpr);
+function layoutStageMobile(){
+  canvas.classList.add('mobile-scale');
 
-  if (canvas.width !== cw || canvas.height !== ch) {
-    canvas.width  = cw;
-    canvas.height = ch;
-    try { unityInstance?.Module?.setCanvasSize?.(cw, ch); } catch {}
+  const r = stage.getBoundingClientRect();
+  const s = r.height / REF_H;
+
+  canvas.style.transform = `translateX(-50%) scale(${s})`;
+}
+
+function layoutStage(){
+  if (isMobileLike()) {
+    layoutStageMobile();
+  } else {
+    layoutStageDesktop();
+    canvas.classList.remove('mobile-scale');
+    canvas.style.transform = '';
+  }
+}
+
+function ensureCanvasBackbuffer(){
+  if (isMobileLike()) {
+    if (canvas.width !== REF_W || canvas.height !== REF_H) {
+      canvas.width  = REF_W;
+      canvas.height = REF_H;
+      try { unityInstance?.Module?.setCanvasSize?.(REF_W, REF_H); } catch {}
+    }
+  } else {
+    const r = stage.getBoundingClientRect();
+    const cw = Math.round(r.width);
+    const ch = Math.round(r.height);
+    if (canvas.width !== cw || canvas.height !== ch) {
+      canvas.width  = cw;
+      canvas.height = ch;
+      try { unityInstance?.Module?.setCanvasSize?.(cw, ch); } catch {}
+    }
   }
 }
 
@@ -129,38 +151,32 @@ function syncCanvasBufferToStage(){
   for (const t of retries) setTimeout(layoutStage, t);
 }*/
 
-function bounceResizeStable() {
+function bounce(){
   layoutStage();
-  syncCanvasBufferToStage();
-  setTimeout(syncCanvasBufferToStage, 60);
-  setTimeout(syncCanvasBufferToStage, 180);
-  setTimeout(syncCanvasBufferToStage, 360);
+  ensureCanvasBackbuffer();
+  setTimeout(() => { layoutStage(); ensureCanvasBackbuffer(); }, 60);
+  setTimeout(() => { layoutStage(); ensureCanvasBackbuffer(); }, 180);
 }
 
 //layoutStage();
 layoutStage();
-syncCanvasBufferToStage();
+ensureCanvasBackbuffer();
 
-window.addEventListener('resize', bounceResizeStable);
-window.addEventListener('orientationchange', bounceResizeStable);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) bounceResizeStable(); });
-window.addEventListener('pageshow', bounceResizeStable);
+window.addEventListener('resize', bounce);
+window.addEventListener('orientationchange', bounce);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) bounce(); });
+window.addEventListener('pageshow', bounce);
 
 try {
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-    requestAnimationFrame(bounceResizeStable);
+    requestAnimationFrame(bounce);
     Telegram.WebApp.onEvent('viewportChanged', (e) => {
-      if (!e || e.isStateStable === undefined || e.isStateStable) bounceResizeStable();
+      if (!e || e.isStateStable === undefined || e.isStateStable) bounce();
     });
   }
 } catch {}
-
-const ro = new ResizeObserver(() => syncCanvasBufferToStage());
-ro.observe(stage);
-
-matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`).addEventListener?.('change', bounceResizeStable);
 
 function updateBubbles(progress){
   const total = BUBBLE_COUNT;
@@ -204,7 +220,7 @@ window.addEventListener("load", () => {
   errorBox.style.display = "none";
   //layoutStage();
   layoutStage();
-  syncCanvasBufferToStage();
+  ensureCanvasBackbuffer();
 
   createUnityInstance(canvas, config, (progress) => {
     updateBubbles(progress);
@@ -223,4 +239,6 @@ window.addEventListener("load", () => {
     console.error(error);
     showError('Unable to load the game. Please refresh the page.');
   });
+
+  bounce();
 });
