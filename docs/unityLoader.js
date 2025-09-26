@@ -34,8 +34,13 @@ config.devicePixelRatio = 1;
 const stage  = document.getElementById('stage');
 const ASPECT_DESKTOP = 10 / 17;
 const PAD_H = 0;
-const REF_W = 540;
-const REF_H = 1080;
+const TARGET_DPR_MIN = 1.0;
+const TARGET_DPR_MAX = 2.0;
+const QUALITY        = 1.25;
+const STEP_PX        = 128;
+const REF_H_MIN      = 960;
+const REF_H_MAX      = 2048;
+const FILL_MODE      = 'cover';
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
@@ -108,41 +113,59 @@ function layoutStageDesktop(){
   stage.style.height = `${h}px`;
 }
 
-function layoutStageMobile(){
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function roundToStep(v, step){ return Math.round(v / step) * step; }
+
+function pickMobileRefSize() {
+  const r = stage.getBoundingClientRect();
+
+  const deviceDpr = clamp(window.devicePixelRatio || 1, TARGET_DPR_MIN, TARGET_DPR_MAX);
+  let refH = r.height * deviceDpr * QUALITY;
+  refH = clamp(refH, REF_H_MIN, REF_H_MAX);
+  refH = roundToStep(refH, STEP_PX);
+
+  const refW = Math.round(refH * (9/18));
+  return { refW, refH, stageW: r.width, stageH: r.height };
+}
+
+function applyMobileScale(refW, refH, stageW, stageH){
   canvas.classList.add('mobile-scale');
 
-  const r = stage.getBoundingClientRect();
-  const s = r.height / REF_H;
+  canvas.style.width  = `${refW}px`;
+  canvas.style.height = `${refH}px`;
 
-  canvas.style.transform = `translateX(-50%) scale(${s})`;
+  let sx = stageW / refW;
+  let sy = stageH / refH;
+  let s  = (FILL_MODE === 'cover') ? Math.max(sx, sy) : Math.min(sx, sy);
+
+  canvas.style.transform = `translate(-50%, -50%) scale(${s})`;
+}
+
+function layoutStageMobile(){
+  const { refW, refH, stageW, stageH } = pickMobileRefSize();
+  applyMobileScale(refW, refH, stageW, stageH);
+  ensureCanvasBackbuffer(refW, refH);
 }
 
 function layoutStage(){
   if (isMobileLike()) {
     layoutStageMobile();
   } else {
-    layoutStageDesktop();
     canvas.classList.remove('mobile-scale');
     canvas.style.transform = '';
+    canvas.style.width = '';
+    canvas.style.height = '';
+    layoutStageDesktop();
+    const r = stage.getBoundingClientRect();
+    ensureCanvasBackbuffer(Math.round(r.width), Math.round(r.height));
   }
 }
 
-function ensureCanvasBackbuffer(){
-  if (isMobileLike()) {
-    if (canvas.width !== REF_W || canvas.height !== REF_H) {
-      canvas.width  = REF_W;
-      canvas.height = REF_H;
-      try { unityInstance?.Module?.setCanvasSize?.(REF_W, REF_H); } catch {}
-    }
-  } else {
-    const r = stage.getBoundingClientRect();
-    const cw = Math.round(r.width);
-    const ch = Math.round(r.height);
-    if (canvas.width !== cw || canvas.height !== ch) {
-      canvas.width  = cw;
-      canvas.height = ch;
-      try { unityInstance?.Module?.setCanvasSize?.(cw, ch); } catch {}
-    }
+function ensureCanvasBackbuffer(targetW, targetH){
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width  = targetW;
+    canvas.height = targetH;
+    try { unityInstance?.Module?.setCanvasSize?.(targetW, targetH); } catch {}
   }
 }
 
@@ -154,13 +177,11 @@ function ensureCanvasBackbuffer(){
 function bounce(){
   layoutStage();
   ensureCanvasBackbuffer();
-  setTimeout(() => { layoutStage(); ensureCanvasBackbuffer(); }, 60);
-  setTimeout(() => { layoutStage(); ensureCanvasBackbuffer(); }, 180);
+  setTimeout(layoutStage, 80);
+  setTimeout(layoutStage, 200);
 }
 
-//layoutStage();
 layoutStage();
-ensureCanvasBackbuffer();
 
 window.addEventListener('resize', bounce);
 window.addEventListener('orientationchange', bounce);
@@ -218,9 +239,7 @@ window.RequestDataFromReact = function() {
 
 window.addEventListener("load", () => {
   errorBox.style.display = "none";
-  //layoutStage();
   layoutStage();
-  ensureCanvasBackbuffer();
 
   createUnityInstance(canvas, config, (progress) => {
     updateBubbles(progress);
