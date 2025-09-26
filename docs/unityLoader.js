@@ -78,9 +78,6 @@ function layoutStage(){
 
   const r = stage.getBoundingClientRect();
 
-  canvas.style.width  = r.width + 'px';
-  canvas.style.height = r.height + 'px';
-
   const dpr = getEffectiveDPR();
   const w = Math.round(r.width  * dpr);
   const h = Math.round(r.height * dpr);
@@ -111,7 +108,7 @@ try {
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-    requestAnimationFrame(() => bounceResizeStable());
+    requestAnimationFrame(bounceResizeStable);
     Telegram.WebApp.onEvent('viewportChanged', (e) => {
       if (!e || e.isStateStable === undefined || e.isStateStable) bounceResizeStable();
     });
