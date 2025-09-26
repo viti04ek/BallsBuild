@@ -202,7 +202,9 @@ window.RequestDataFromReact = function() {
 
 window.addEventListener("load", () => {
   errorBox.style.display = "none";
-  layoutStage();
+  //layoutStage();
+  layoutStageBox();
+  syncCanvasBufferToStage();
 
   createUnityInstance(canvas, config, (progress) => {
     updateBubbles(progress);
