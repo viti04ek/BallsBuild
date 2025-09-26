@@ -29,24 +29,24 @@ const config = {
 };
 
 const stage  = document.getElementById('stage');
-const ASPECT_DESKTOP = 9 / 17;
+const ASPECT_DESKTOP = 10 / 17;
 const PAD_H = 0;
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
-  const vh =
-    (tg && tg.viewportStableHeight) ||
-    (window.visualViewport && window.visualViewport.height) ||
-    window.innerHeight;
+  let vh = window.innerHeight;
+  let vw = window.innerWidth;
 
-  const vw = window.innerWidth;
+  if (tg) {
+    const stable = tg.viewportStableHeight || tg.viewportHeight;
+    if (stable && stable > 200) vh = stable;
+  }
   return { vw, vh };
 }
 
 function getEffectiveDPR() {
-  const scale = window.visualViewport?.scale || 1;
-  const dpr = (window.devicePixelRatio || 1) / scale;
-  return Math.min(dpr, 2);
+  const dpr = window.devicePixelRatio || 1;
+  return Math.min(Math.max(dpr, 1), 2);
 }
 
 function isMobileLike(){
@@ -60,8 +60,8 @@ function layoutStage(){
   const mobile = isMobileLike();
 
   if (mobile) {
-    stage.style.width  = vw + 'px';
-    stage.style.height = vh + 'px';
+    stage.style.width  = '100vw';
+    stage.style.height = '100dvh';
   } else {
     let targetH = vh;
     let targetW = targetH * ASPECT_DESKTOP;
@@ -96,30 +96,24 @@ function layoutStage(){
   }
 }
 
-function bounceResize() {
+function bounceResizeStable(retries = [0, 60, 180, 360]) {
   layoutStage();
-  setTimeout(layoutStage, 50);
-  setTimeout(layoutStage, 200);
+  for (const t of retries) setTimeout(layoutStage, t);
 }
 
 layoutStage();
-window.addEventListener('resize', bounceResize);
-window.addEventListener('orientationchange', bounceResize);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) bounceResize(); });
-window.addEventListener('pageshow', bounceResize);
+window.addEventListener('resize', bounceResizeStable());
+window.addEventListener('orientationchange', bounceResizeStable());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) bounceResizeStable(); });
+window.addEventListener('pageshow', bounceResizeStable());
 
 try {
-  if (window.visualViewport) {
-    visualViewport.addEventListener('resize', bounceResize);
-    visualViewport.addEventListener('scroll', bounceResize);
-  }
-
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-    requestAnimationFrame(bounceResize);
+    requestAnimationFrame(() => bounceResizeStable());
     Telegram.WebApp.onEvent('viewportChanged', (e) => {
-      if (!e || e.isStateStable === undefined || e.isStateStable) bounceResize();
+      if (!e || e.isStateStable === undefined || e.isStateStable) bounceResizeStable();
     });
   }
 } catch {}
