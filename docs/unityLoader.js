@@ -55,7 +55,7 @@ function isMobileLike(){
   return matchMedia('(pointer:coarse)').matches || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 }
 
-function layoutStage(){
+/*function layoutStage(){
   const { vw, vh } = getViewportSize();
   const mobile = isMobileLike();
 
@@ -91,18 +91,60 @@ function layoutStage(){
       }
     } catch {}
   }
+}*/
+
+function layoutStageBox(){
+  if (isMobileLike()) {
+    stage.style.width  = '100vw';
+    stage.style.height = '100dvh';
+    return;
+  }
+  const { vw, vh } = getViewportSize();
+  let targetH = vh;
+  let targetW = targetH * ASPECT_DESKTOP;
+  const maxW = vw * (1 - PAD_H*2);
+  if (targetW > maxW) {
+    targetW = maxW;
+    targetH = targetW / ASPECT_DESKTOP;
+  }
+  stage.style.width  = `${targetW}px`;
+  stage.style.height = `${targetH}px`;
 }
 
-function bounceResizeStable(retries = [0, 60, 180, 360]) {
+function syncCanvasBufferToStage(){
+  const r = stage.getBoundingClientRect();
+  const dpr = getEffectiveDPR();
+  const cw = Math.round(r.width  * dpr);
+  const ch = Math.round(r.height * dpr);
+
+  if (canvas.width !== cw || canvas.height !== ch) {
+    canvas.width  = cw;
+    canvas.height = ch;
+    try { unityInstance?.Module?.setCanvasSize?.(cw, ch); } catch {}
+  }
+}
+
+/*function bounceResizeStable(retries = [0, 60, 180, 360]) {
   layoutStage();
   for (const t of retries) setTimeout(layoutStage, t);
+}*/
+
+function bounceResizeStable() {
+  layoutStageBox();
+  syncCanvasBufferToStage();
+  setTimeout(syncCanvasBufferToStage, 60);
+  setTimeout(syncCanvasBufferToStage, 180);
+  setTimeout(syncCanvasBufferToStage, 360);
 }
 
-layoutStage();
-window.addEventListener('resize', bounceResizeStable());
-window.addEventListener('orientationchange', bounceResizeStable());
+//layoutStage();
+layoutStageBox();
+syncCanvasBufferToStage();
+
+window.addEventListener('resize', bounceResizeStable);
+window.addEventListener('orientationchange', bounceResizeStable);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) bounceResizeStable(); });
-window.addEventListener('pageshow', bounceResizeStable());
+window.addEventListener('pageshow', bounceResizeStable);
 
 try {
   if (window.Telegram?.WebApp) {
@@ -114,6 +156,11 @@ try {
     });
   }
 } catch {}
+
+const ro = new ResizeObserver(() => syncCanvasBufferToStage());
+ro.observe(stage);
+
+matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`).addEventListener?.('change', bounceResizeStable);
 
 function updateBubbles(progress){
   const total = BUBBLE_COUNT;
