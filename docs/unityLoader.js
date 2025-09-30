@@ -19,9 +19,9 @@ function showError(message){ errorBox.style.display="block"; errorBox.innerHTML=
 
 const buildUrl = "Build";
 const config = {
-  dataUrl: buildUrl + "/Balls.data",
-  frameworkUrl: buildUrl + "/Balls.framework.js",
-  codeUrl: buildUrl + "/Balls.wasm",
+  dataUrl: buildUrl + "/Balls.data.unityweb",
+  frameworkUrl: buildUrl + "/Balls.framework.js.unityweb",
+  codeUrl: buildUrl + "/Balls.wasm.unityweb",
   streamingAssetsUrl: "StreamingAssets",
   companyName: "DefaultCompany",
   productName: "balls",
@@ -30,6 +30,8 @@ const config = {
 
 config.matchWebGLToCanvasSize = false;
 config.devicePixelRatio = 1;
+const __initialDpr = !isMobileLike() ? getDesktopEffectiveDPR() : 1;
+config.devicePixelRatio = __initialDpr;
 
 const stage  = document.getElementById('stage');
 const ASPECT_DESKTOP = 10 / 17;
@@ -116,6 +118,14 @@ function layoutStageDesktop(){
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 function roundToStep(v, step){ return Math.round(v / step) * step; }
 
+function getDesktopEffectiveDPR() {
+  let dpr = window.devicePixelRatio || 1;
+  if (window.visualViewport && typeof window.visualViewport.scale === 'number') {
+    dpr *= window.visualViewport.scale;
+  }
+  return clamp(dpr, TARGET_DPR_MIN, TARGET_DPR_MAX);
+}
+
 function pickMobileRefSize() {
   const r = stage.getBoundingClientRect();
 
@@ -157,7 +167,11 @@ function layoutStage(){
     canvas.style.height = '';
     layoutStageDesktop();
     const r = stage.getBoundingClientRect();
-    ensureCanvasBackbuffer(Math.round(r.width), Math.round(r.height));
+    //ensureCanvasBackbuffer(Math.round(r.width), Math.round(r.height));
+    const dpr = getDesktopEffectiveDPR();
+    const targetW = Math.round(r.width  * dpr);
+    const targetH = Math.round(r.height * dpr);
+    ensureCanvasBackbuffer(targetW, targetH);
   }
 }
 
