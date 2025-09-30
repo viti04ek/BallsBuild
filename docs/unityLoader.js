@@ -213,6 +213,51 @@ try {
   }
 } catch {}
 
+function isMobileTelegram() {
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return false;
+  if (tg.platform === 'android' || tg.platform === 'ios') return true;
+  if (typeof tg.isDesktop === 'boolean') return !tg.isDesktop;
+  return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+}
+
+let _fsDone = false;
+async function requestFullscreenNow() {
+  if (_fsDone) return;
+  const tg = window.Telegram?.WebApp;
+  if (!tg || !isMobileTelegram()) return;
+
+  try { tg.ready?.(); } catch {}
+  try { tg.expand?.(); } catch {}
+  try { tg.setHeaderColor?.('bg_color'); } catch {}
+
+  if (typeof tg.requestFullscreen === 'function') {
+    try { 
+      await tg.requestFullscreen();
+      _fsDone = true;
+    } catch (_) { }
+  }
+}
+
+requestFullscreenNow();
+
+setTimeout(requestFullscreenNow, 120);
+requestAnimationFrame(() => setTimeout(requestFullscreenNow, 0));
+
+try {
+  window.Telegram?.WebApp?.onEvent?.('viewportChanged', (e) => {
+    if (!_fsDone && (!e || e.isStateStable === undefined || e.isStateStable)) {
+      requestFullscreenNow();
+    }
+  });
+} catch {}
+
+try {
+  window.Telegram?.WebApp?.onEvent?.('fullscreenFailed', ({ error }) => {
+    console.log('Telegram fullscreen failed:', error);
+  });
+} catch {}
+
 function updateBubbles(progress){
   const total = BUBBLE_COUNT;
   const p = Math.max(0, Math.min(1, progress || 0));
