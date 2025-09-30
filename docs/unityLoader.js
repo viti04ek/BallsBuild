@@ -8,6 +8,17 @@ const bubbleTrack = document.getElementById("bubble-track");
 const BUBBLE_COUNT = 12;
 const bubbles = [];
 
+const stage  = document.getElementById('stage');
+const ASPECT_DESKTOP = 10 / 17;
+const PAD_H = 0;
+const TARGET_DPR_MIN = 1.0;
+const TARGET_DPR_MAX = 2.0;
+const QUALITY        = 1.25;
+const STEP_PX        = 128;
+const REF_H_MIN      = 960;
+const REF_H_MAX      = 2048;
+const FILL_MODE      = 'cover';
+
 for (let i = 0; i < BUBBLE_COUNT; i++) {
   const b = document.createElement("div");
   b.className = "bubble";
@@ -32,17 +43,6 @@ config.matchWebGLToCanvasSize = false;
 config.devicePixelRatio = 1;
 const __initialDpr = !isMobileLike() ? getDesktopEffectiveDPR() : 1;
 config.devicePixelRatio = __initialDpr;
-
-const stage  = document.getElementById('stage');
-const ASPECT_DESKTOP = 10 / 17;
-const PAD_H = 0;
-const TARGET_DPR_MIN = 1.0;
-const TARGET_DPR_MAX = 2.0;
-const QUALITY        = 1.25;
-const STEP_PX        = 128;
-const REF_H_MIN      = 960;
-const REF_H_MAX      = 2048;
-const FILL_MODE      = 'cover';
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
