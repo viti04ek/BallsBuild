@@ -9,7 +9,7 @@ const BUBBLE_COUNT = 12;
 const bubbles = [];
 
 const stage  = document.getElementById('stage');
-const ASPECT_DESKTOP = 10 / 17;
+const ASPECT_DESKTOP = 10 / 16;
 const PAD_H = 0;
 const TARGET_DPR_MIN = 1.0;
 const TARGET_DPR_MAX = 2.0;
