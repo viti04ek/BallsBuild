@@ -54,7 +54,8 @@ const BG_PARAMS = {
 };
 
 const bgCanvas = document.getElementById('bg-waves');
-const bgCtx    = bgCanvas.getContext('2d', { alpha:false, desynchronized:true });
+const bgCtx = bgCanvas.getContext('2d', { alpha:false, desynchronized:true });
+if (!bgCtx) bgCtx = bgCanvas.getContext('2d');
 
 function hexToRgb(h){
   const s = h.replace('#','');
