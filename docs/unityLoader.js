@@ -110,41 +110,55 @@ function drawDiagonalWaves(params = BG_PARAMS){
 
 function redrawBackground(){ drawDiagonalWaves(); }
 
-function readCssSafeInsets(){
-  const cs = getComputedStyle(document.documentElement);
-  const top = parseFloat(cs.getPropertyValue('--sat')) || 0;
-  const bottom = parseFloat(cs.getPropertyValue('--sab')) || 0;
-  return { top, bottom };
-}
-
-function computeTelegramSafeTopPx(){
-  if (!isMobileTelegram()) return 0;
-
+function getSafeTopFromTelegram() {
   const tg = window.Telegram?.WebApp;
-  const { top: cssSafeTop, bottom: cssSafeBottom } = readCssSafeInsets();
+  if (!tg) return 0;
 
-  const usableHeight = tg?.viewportStableHeight || tg?.viewportHeight || window.innerHeight;
+  const csi = tg.contentSafeAreaInset || tg.contentSafeAreaInsets;
+  const si  = tg.safeAreaInset        || tg.safeAreaInsets;
 
-  const overlayTotal = Math.max(0, window.innerHeight - usableHeight);
+  let top = 0;
+  if (csi && typeof csi.top === 'number') top = csi.top;
+  else if (si && typeof si.top === 'number') top = si.top;
 
-  const headerApprox = Math.max(0, overlayTotal - cssSafeBottom);
-
-  const safeTopPx = Math.round(cssSafeTop + headerApprox);
-
-  return safeTopPx;
+  if (!top) {
+    const css = getComputedStyle(document.documentElement);
+    const cssTop = parseFloat(css.getPropertyValue('--sat')) || 0;
+    const tgH = tg?.viewportStableHeight || tg?.viewportHeight || window.innerHeight;
+    const overlayTotal = Math.max(0, window.innerHeight - tgH);
+    top = Math.round(cssTop + overlayTotal);
+  }
+  return Math.max(0, Math.round(top));
 }
-
-let __pendingSafeAreaPx = null;
 
 function sendSafeAreaToUnity(){
-  const px = computeTelegramSafeTopPx();
-  __pendingSafeAreaPx = px;
+  const px = getSafeTopFromTelegram();
   if (window.unityInstance){
-    try{
-      window.unityInstance.SendMessage('PlayerDataManager','SetSafeArea', String(px));
-    }catch(e){ }
+    try { window.unityInstance.SendMessage('PlayerDataManager','SetSafeArea', String(px)); } catch {}
   }
 }
+
+function hookTelegramSafeArea(){
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return;
+
+  try { tg.requestContentSafeArea?.(); } catch {}
+  try { tg.requestSafeArea?.(); } catch {}
+
+  sendSafeAreaToUnity();
+
+  const onChange = () => sendSafeAreaToUnity();
+
+  tg.onEvent?.('contentSafeAreaChanged', onChange);
+  tg.onEvent?.('safeAreaChanged', onChange);
+  tg.onEvent?.('fullscreenChanged', onChange);
+  tg.onEvent?.('viewportChanged', (e)=>{ if (!e || e.isStateStable === undefined || e.isStateStable) onChange(); });
+
+  tg.onEvent?.('content_safe_area_changed', onChange);
+  tg.onEvent?.('safe_area_changed', onChange);
+}
+
+hookTelegramSafeArea();
 
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
