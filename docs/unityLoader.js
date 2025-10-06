@@ -44,6 +44,107 @@ config.devicePixelRatio = 1;
 const __initialDpr = !isMobileLike() ? getDesktopEffectiveDPR() : 1;
 config.devicePixelRatio = __initialDpr;
 
+const BG_PARAMS = {
+  color1: '#080030',
+  color2: '#000000',
+  angle: 125,
+  frequency: 2,
+  spacing: 1.5,
+  offset: 0.15
+};
+
+const bgCanvas = document.getElementById('bg-waves');
+const bgCtx    = bgCanvas.getContext('2d', { alpha:false, desynchronized:true });
+
+function hexToRgb(h){
+  const s = h.replace('#','');
+  const n = parseInt(s.length===3 ? s.split('').map(c=>c+c).join('') : s, 16);
+  return [ (n>>16)&255, (n>>8)&255, n&255 ];
+}
+
+function drawDiagonalWaves(params = BG_PARAMS){
+  const { vw, vh } = getViewportSize();
+  const dpr = clamp(window.devicePixelRatio || 1, 1, 2);
+  const W = Math.max(1, Math.round(vw * dpr));
+  const H = Math.max(1, Math.round(vh * dpr));
+  if (bgCanvas.width !== W || bgCanvas.height !== H){
+    bgCanvas.width = W; bgCanvas.height = H;
+    bgCanvas.style.width  = vw + 'px';
+    bgCanvas.style.height = vh + 'px';
+  }
+
+  const c1 = hexToRgb(params.color1);
+  const c2 = hexToRgb(params.color2);
+
+  const rad = params.angle * Math.PI / 180;
+  const dirx = Math.cos(rad);
+  const diry = Math.sin(rad);
+
+  const freq    = params.frequency;
+  const spacing = params.spacing;
+  const offset  = params.offset;
+
+  const img = bgCtx.createImageData(W, H);
+  const data = img.data;
+
+  for (let y = 0; y < H; y++){
+    const v = 1 - (y / (H - 1));
+    let row = y * W * 4;
+    for (let x = 0; x < W; x++){
+      const u = x / (W - 1);
+
+      let t = (u * dirx + v * diry);
+      t = (t * freq * spacing + offset) * Math.PI;
+
+      const w = 0.5 + 0.5 * Math.sin(t);
+
+      data[row++] = Math.round(c1[0] * (1 - w) + c2[0] * w);
+      data[row++] = Math.round(c1[1] * (1 - w) + c2[1] * w);
+      data[row++] = Math.round(c1[2] * (1 - w) + c2[2] * w);
+      data[row++] = 255;
+    }
+  }
+  bgCtx.putImageData(img, 0, 0);
+}
+
+function redrawBackground(){ drawDiagonalWaves(); }
+
+function readCssSafeInsets(){
+  const cs = getComputedStyle(document.documentElement);
+  const top = parseFloat(cs.getPropertyValue('--sat')) || 0;
+  const bottom = parseFloat(cs.getPropertyValue('--sab')) || 0;
+  return { top, bottom };
+}
+
+function computeTelegramSafeTopPx(){
+  if (!isMobileTelegram()) return 0;
+
+  const tg = window.Telegram?.WebApp;
+  const { top: cssSafeTop, bottom: cssSafeBottom } = readCssSafeInsets();
+
+  const usableHeight = tg?.viewportStableHeight || tg?.viewportHeight || window.innerHeight;
+
+  const overlayTotal = Math.max(0, window.innerHeight - usableHeight);
+
+  const headerApprox = Math.max(0, overlayTotal - cssSafeBottom);
+
+  const safeTopPx = Math.round(cssSafeTop + headerApprox);
+
+  return safeTopPx;
+}
+
+let __pendingSafeAreaPx = null;
+
+function sendSafeAreaToUnity(){
+  const px = computeTelegramSafeTopPx();
+  __pendingSafeAreaPx = px;
+  if (window.unityInstance){
+    try{
+      window.unityInstance.SendMessage('PlayerDataManager','SetSafeArea', String(px));
+    }catch(e){ }
+  }
+}
+
 function getViewportSize() {
   const tg = window.Telegram?.WebApp;
   let vh = window.innerHeight;
@@ -196,19 +297,23 @@ function bounce(){
 }
 
 layoutStage();
+redrawBackground();
+sendSafeAreaToUnity();
 
-window.addEventListener('resize', bounce);
-window.addEventListener('orientationchange', bounce);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) bounce(); });
-window.addEventListener('pageshow', bounce);
+window.addEventListener('resize', () => { bounce(); redrawBackground(); });
+window.addEventListener('orientationchange', () => { bounce(); redrawBackground(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden){ bounce(); redrawBackground(); }});
+window.addEventListener('pageshow', () => { bounce(); redrawBackground(); });
 
 try {
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-    requestAnimationFrame(bounce);
+    requestAnimationFrame(() => { bounce(); redrawBackground(); });
     Telegram.WebApp.onEvent('viewportChanged', (e) => {
-      if (!e || e.isStateStable === undefined || e.isStateStable) bounce();
+      if (!e || e.isStateStable === undefined || e.isStateStable){
+        bounce(); redrawBackground();
+      }
     });
   }
 } catch {}
@@ -305,6 +410,7 @@ window.addEventListener("load", () => {
   }).then((instance) => {
     unityInstance = instance;
     window.unityInstance = instance;
+    sendSafeAreaToUnity();
 
     if (window.pendingUserData) {
       unityInstance.SendMessage('JSConnect', 'ReceiveDataFromReact', window.pendingUserData);

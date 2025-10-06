@@ -1,12 +1,20 @@
-:root { color-scheme: light dark; }
-html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:'Rubik', system-ui, -apple-system, sans-serif; }
+:root { 
+  color-scheme: light dark; 
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
+html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:'Rubik', system-ui, -apple-system, sans-serif; background:#000; }
 
 #unity-container{
   position:fixed; inset:0;
   display:flex; align-items:center; justify-content:center;
-  background:
-    radial-gradient(120% 120% at 80% 0%, rgba(70,120,255,0.18) 0%, rgba(0,0,0,0) 55%),
-    linear-gradient(135deg, #0a0d29 0%, #0b0a2a 45%, #0c0a25 60%, #091020 100%);
+  background: transparent;
+}
+
+#bg-waves{
+  position:fixed; inset:0;
+  width:100vw; height:100vh;
+  z-index:-1; pointer-events:none; display:block;
 }
 
 #stage{ position:relative; }
