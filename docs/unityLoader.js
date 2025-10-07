@@ -428,7 +428,6 @@ async function requestFullscreenNow() {
 function armInteractiveFullscreenOnce(){
   const once = async () => {
     if (_fsDone) return;
-    if (!isFullscreenAvailable()) return;
     try {
       await window.Telegram?.WebApp?.requestFullscreen?.();
       _fsDone = true;
@@ -534,5 +533,5 @@ window.addEventListener("load", () => {
     showError('Unable to load the game. Please refresh the page.');
   });
 
-  bounce();
+  debouncedResize();
 });
