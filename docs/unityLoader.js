@@ -405,12 +405,20 @@ function isMobileTelegram() {
   return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 }
 
+function isMobileTelegramStrict() {
+  const tg = window.Telegram?.WebApp;
+  if (!tg) return false;
+  if (tg.platform === 'android' || tg.platform === 'ios') return true;
+  if (typeof tg.isDesktop === 'boolean') return !tg.isDesktop;
+  return false;
+}
+
 let _fsDone = false;
 let _fsTriedAuto = false;
 async function requestFullscreenNow() {
   if (_fsDone) return;
   const tg = window.Telegram?.WebApp;
-  if (!tg || !isMobileTelegram()) return;
+  if (!tg || !isMobileTelegramStrict()) return;
 
   try { tg.ready?.(); } catch {}
   try { tg.expand?.(); } catch {}
@@ -426,7 +434,7 @@ async function requestFullscreenNow() {
 }
 
 function armInteractiveFullscreenOnce(){
-  if (!isMobileTelegram()) return;
+  if (!isMobileTelegramStrict()) return;
   const once = async () => {
     if (_fsDone) return;
     try {
@@ -442,10 +450,11 @@ function armInteractiveFullscreenOnce(){
   window.addEventListener('touchend',  once, { passive:true, capture:true, once:true });
 }
 
-requestFullscreenNow();
-
-setTimeout(requestFullscreenNow, 120);
-requestAnimationFrame(() => setTimeout(requestFullscreenNow, 0));
+if (isMobileTelegramStrict()) {
+  requestFullscreenNow();
+  setTimeout(requestFullscreenNow, 120);
+  requestAnimationFrame(() => setTimeout(requestFullscreenNow, 0));
+}
 
 try {
   if (window.Telegram?.WebApp) {
