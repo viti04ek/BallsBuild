@@ -426,6 +426,7 @@ async function requestFullscreenNow() {
 }
 
 function armInteractiveFullscreenOnce(){
+  if (!isMobileTelegram()) return;
   const once = async () => {
     if (_fsDone) return;
     try {
@@ -456,13 +457,6 @@ try {
         if (!_fsDone) armInteractiveFullscreenOnce(); // запаска по жесту
       }
     });
-
-    // если уже стабильно (редкие случаи)
-    if (Telegram.WebApp.viewportStableHeight) {
-      telegramViewportStable = true;
-      requestFullscreenNow();
-      if (!_fsDone) armInteractiveFullscreenOnce();
-    }
   }
 } catch {}
 
