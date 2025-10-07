@@ -19,6 +19,14 @@ const REF_H_MIN      = 960;
 const REF_H_MAX      = 2048;
 const FILL_MODE      = 'cover';
 
+let cachedSafeArea = null;
+let cachedDPR = null;
+let lastViewportSize = null;
+let isLayouting = false;
+let isResizing = false;
+let resizeTimeout;
+let telegramViewportStable = false;
+
 for (let i = 0; i < BUBBLE_COUNT; i++) {
   const b = document.createElement("div");
   b.className = "bubble";
@@ -108,6 +116,8 @@ function drawDiagonalWaves(params = BG_PARAMS){
   bgCtx.putImageData(img, 0, 0);
 }
 
+let backgroundCache = null;
+
 function redrawBackground(){ drawDiagonalWaves(); }
 
 function getSafeTopFromTelegram() {
@@ -172,9 +182,24 @@ function getViewportSize() {
   return { vw, vh };
 }
 
-function getEffectiveDPR() {
+function getStableDPR() {
+  const currentSize = `${window.innerWidth}x${window.innerHeight}`;
+  
+  if (cachedDPR && lastViewportSize === currentSize) {
+    return cachedDPR;
+  }
+  
   const dpr = window.devicePixelRatio || 1;
-  return Math.min(Math.max(dpr, 1), 2);
+  const stableDPR = Math.min(Math.max(dpr, 1), 2);
+  
+  cachedDPR = stableDPR;
+  lastViewportSize = currentSize;
+  
+  return stableDPR;
+}
+
+function getEffectiveDPR() {
+  return getStableDPR();
 }
 
 function isMobileLike(){
@@ -229,6 +254,11 @@ function layoutStageDesktop(){
   if (w > maxW) { w = maxW; h = w / ASPECT_DESKTOP; }
   stage.style.width  = `${w}px`;
   stage.style.height = `${h}px`;
+
+  const dpr = getStableDPR();
+  const targetW = Math.round(w * dpr);
+  const targetH = Math.round(h * dpr);
+  ensureCanvasBackbuffer(targetW, targetH);
 }
 
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -274,6 +304,9 @@ function layoutStageMobile(){
 }
 
 function layoutStage(){
+  if (isLayouting) return;
+  isLayouting = true;
+
   if (isMobileLike()) {
     layoutStageMobile();
   } else {
@@ -282,12 +315,11 @@ function layoutStage(){
     canvas.style.width = '';
     canvas.style.height = '';
     layoutStageDesktop();
-    const r = stage.getBoundingClientRect();
-    //ensureCanvasBackbuffer(Math.round(r.width), Math.round(r.height));
+    /*const r = stage.getBoundingClientRect();
     const dpr = getDesktopEffectiveDPR();
     const targetW = Math.round(r.width  * dpr);
     const targetH = Math.round(r.height * dpr);
-    ensureCanvasBackbuffer(targetW, targetH);
+    ensureCanvasBackbuffer(targetW, targetH);*/
   }
 }
 
@@ -304,34 +336,66 @@ function ensureCanvasBackbuffer(targetW, targetH){
   for (const t of retries) setTimeout(layoutStage, t);
 }*/
 
-function bounce(){
-  layoutStage();
-  ensureCanvasBackbuffer();
-  setTimeout(layoutStage, 80);
-  setTimeout(layoutStage, 200);
+function debouncedResize() {
+  if (isResizing) return;
+  isResizing = true;
+  
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    layoutStage();
+    redrawBackground();
+    sendSafeAreaToUnity();
+    isResizing = false;
+  }, 100); // Увеличиваем до 100ms для стабильности
 }
 
-layoutStage();
-redrawBackground();
-sendSafeAreaToUnity();
+// Стабильная версия bounce без множественных setTimeout
+function stableLayout() {
+  if (isLayouting) return;
+  isLayouting = true;
+  
+  layoutStage();
+  redrawBackground();
+  sendSafeAreaToUnity();
+  
+  setTimeout(() => {
+    isLayouting = false;
+  }, 50);
+}
 
-window.addEventListener('resize', () => { bounce(); redrawBackground(); });
-window.addEventListener('orientationchange', () => { bounce(); redrawBackground(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden){ bounce(); redrawBackground(); }});
-window.addEventListener('pageshow', () => { bounce(); redrawBackground(); });
+// Инициализация
+stableLayout();
+
+window.addEventListener('resize', debouncedResize);
+window.addEventListener('orientationchange', debouncedResize);
+document.addEventListener('visibilitychange', () => { 
+  if (!document.hidden) { 
+    debouncedResize(); 
+  }
+});
+window.addEventListener('pageshow', debouncedResize);
 
 try {
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
-    requestAnimationFrame(() => { bounce(); redrawBackground(); });
+    
+    // Только один вызов после инициализации
+    requestAnimationFrame(() => { 
+      debouncedResize(); 
+    });
+    
+    // Стабильный обработчик viewport с проверкой стабильности
     Telegram.WebApp.onEvent('viewportChanged', (e) => {
-      if (!e || e.isStateStable === undefined || e.isStateStable){
-        bounce(); redrawBackground();
+      if (e && e.isStateStable === true && !telegramViewportStable) {
+        telegramViewportStable = true;
+        debouncedResize();
       }
     });
   }
-} catch {}
+} catch (error) {
+  console.warn('Telegram WebApp initialization failed:', error);
+}
 
 function isMobileTelegram() {
   const tg = window.Telegram?.WebApp;
