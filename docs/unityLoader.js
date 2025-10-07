@@ -406,6 +406,7 @@ function isMobileTelegram() {
 }
 
 let _fsDone = false;
+let _fsTriedAuto = false;
 async function requestFullscreenNow() {
   if (_fsDone) return;
   const tg = window.Telegram?.WebApp;
@@ -421,6 +422,24 @@ async function requestFullscreenNow() {
       _fsDone = true;
     } catch (_) { }
   }
+  _fsTriedAuto = true;
+}
+
+function armInteractiveFullscreenOnce(){
+  const once = async () => {
+    if (_fsDone) return;
+    if (!isFullscreenAvailable()) return;
+    try {
+      await window.Telegram?.WebApp?.requestFullscreen?.();
+      _fsDone = true;
+    } catch {}
+    window.removeEventListener('pointerup', once, { capture:true });
+    window.removeEventListener('click', once, { capture:true });
+    window.removeEventListener('touchend', once, { capture:true });
+  };
+  window.addEventListener('pointerup', once, { passive:true, capture:true, once:true });
+  window.addEventListener('click',     once, { passive:true, capture:true, once:true });
+  window.addEventListener('touchend',  once, { passive:true, capture:true, once:true });
 }
 
 requestFullscreenNow();
@@ -429,11 +448,23 @@ setTimeout(requestFullscreenNow, 120);
 requestAnimationFrame(() => setTimeout(requestFullscreenNow, 0));
 
 try {
-  window.Telegram?.WebApp?.onEvent?.('viewportChanged', (e) => {
-    if (!_fsDone && (!e || e.isStateStable === undefined || e.isStateStable)) {
+  if (window.Telegram?.WebApp) {
+    Telegram.WebApp.ready();
+    Telegram.WebApp.onEvent('viewportChanged', (e) => {
+      if (e && e.isStateStable === true && !telegramViewportStable) {
+        telegramViewportStable = true;
+        requestFullscreenNow();         // авто-попытка
+        if (!_fsDone) armInteractiveFullscreenOnce(); // запаска по жесту
+      }
+    });
+
+    // если уже стабильно (редкие случаи)
+    if (Telegram.WebApp.viewportStableHeight) {
+      telegramViewportStable = true;
       requestFullscreenNow();
+      if (!_fsDone) armInteractiveFullscreenOnce();
     }
-  });
+  }
 } catch {}
 
 try {
