@@ -1,6 +1,6 @@
 let unityInstance = null;
-let unityInstanceRef = null;
-let unsubscribe = null;
+var unityInstanceRef = null;
+var unsubscribe = null;
 
 const canvas = document.querySelector("#unity-canvas");
 const loader = document.getElementById("loader");
