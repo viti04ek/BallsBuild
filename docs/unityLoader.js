@@ -1,4 +1,6 @@
 let unityInstance = null;
+let unityInstanceRef = null;
+let unsubscribe = null;
 
 const canvas = document.querySelector("#unity-canvas");
 const loader = document.getElementById("loader");
@@ -521,6 +523,7 @@ window.addEventListener("load", () => {
     updateBubbles(progress);
   }).then((instance) => {
     unityInstance = instance;
+    unityInstanceRef = instance;
     window.unityInstance = instance;
     sendSafeAreaToUnity();
 
