@@ -2,6 +2,14 @@ let unityInstance = null;
 var unityInstanceRef = null;
 var unsubscribe = null;
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('ServiceWorker.js').catch((err) => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
+
 const canvas = document.querySelector("#unity-canvas");
 const loader = document.getElementById("loader");
 const errorBox = document.getElementById("error-message");
@@ -381,6 +389,13 @@ try {
   if (window.Telegram?.WebApp) {
     Telegram.WebApp.ready();
     Telegram.WebApp.expand();
+
+    const tgVersion = Telegram.WebApp.version;
+    const tgVersionNumber = parseFloat(tgVersion);
+    if (!Number.isNaN(tgVersionNumber) && tgVersionNumber >= 7.7 && typeof Telegram.WebApp.disableVerticalSwipes === 'function') {
+      Telegram.WebApp.disableVerticalSwipes();
+      console.log(`Telegram WebApp vertical swipes disabled (version ${tgVersion})`);
+    }
     
     // Только один вызов после инициализации
     requestAnimationFrame(() => { 
