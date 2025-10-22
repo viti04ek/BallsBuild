@@ -1,75 +1,33 @@
-const cacheVersion = "1.0" + '-' + "Balls.wasm.unityweb";
-const cacheName = "DefaultCompany-balls" + '-' + cacheVersion;
-const criticalPatterns = [
-    /\/TonConnectBridge\.jslib(\?|$)/,
-    /\/Build\/.*\.(data|wasm|js)(\?|$)/
-];
-
+const cacheName = "DefaultCompany-balls-1.0";
 const contentToCache = [
     "Build/Balls.loader.js",
     "Build/Balls.framework.js.unityweb",
     "Build/Balls.data.unityweb",
     "Build/Balls.wasm.unityweb",
     "TemplateData/style.css"
+
 ];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', function (e) {
     console.log('[Service Worker] Install');
-    self.skipWaiting();
-
-    event.waitUntil((async () => {
-        const cache = await caches.open(cacheName);
-        console.log('[Service Worker] Caching predefined assets');
-        await cache.addAll(contentToCache);
+    
+    e.waitUntil((async function () {
+      const cache = await caches.open(cacheName);
+      console.log('[Service Worker] Caching all: app shell and content');
+      await cache.addAll(contentToCache);
     })());
 });
 
-self.addEventListener('activate', (event) => {
-    console.log('[Service Worker] Activate');
+self.addEventListener('fetch', function (e) {
+    e.respondWith((async function () {
+      let response = await caches.match(e.request);
+      console.log(`[Service Worker] Fetching resource: ${e.request.url}`);
+      if (response) { return response; }
 
-    event.waitUntil((async () => {
-        const keys = await caches.keys();
-        await Promise.all(
-            keys.filter((key) => key !== cacheName)
-                .map((key) => {
-                    console.log('[Service Worker] Removing old cache:', key);
-                    return caches.delete(key);
-                })
-        );
-        await self.clients.claim();
-    })());
-});
-
-self.addEventListener('fetch', (event) => {
-    const { request } = event;
-    const url = request.url;
-    const isCritical = criticalPatterns.some((pattern) => pattern.test(url));
-
-    event.respondWith((async () => {
-        if (isCritical) {
-            try {
-                const networkResponse = await fetch(request, { cache: 'no-store' });
-                const cache = await caches.open(cacheName);
-                cache.put(request, networkResponse.clone());
-                return networkResponse;
-            } catch (error) {
-                const cached = await caches.match(request);
-                if (cached) {
-                    console.warn('[Service Worker] Using cached critical asset after network failure:', url);
-                    return cached;
-                }
-                throw error;
-            }
-        }
-
-        const cached = await caches.match(request);
-        if (cached) {
-            return cached;
-        }
-
-        const networkResponse = await fetch(request);
-        const cache = await caches.open(cacheName);
-        cache.put(request, networkResponse.clone());
-        return networkResponse;
+      response = await fetch(e.request);
+      const cache = await caches.open(cacheName);
+      console.log(`[Service Worker] Caching new resource: ${e.request.url}`);
+      cache.put(e.request, response.clone());
+      return response;
     })());
 });
