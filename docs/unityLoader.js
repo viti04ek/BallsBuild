@@ -542,11 +542,6 @@ window.addEventListener("load", () => {
     window.unityInstance = instance;
     sendSafeAreaToUnity();
 
-    if (window.pendingUserData) {
-      unityInstance.SendMessage('JSConnect', 'ReceiveDataFromReact', window.pendingUserData);
-      window.pendingUserData = null;
-    }
-
     loader.style.opacity = "0";
     setTimeout(() => { loader.style.display = "none"; }, 180);
   }).catch((error) => {
