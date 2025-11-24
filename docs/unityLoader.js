@@ -54,7 +54,7 @@ const config = {
   streamingAssetsUrl: "StreamingAssets",
   companyName: "DefaultCompany",
   productName: "balls",
-  productVersion: "1.0"
+  productVersion: "0.1.0"
 };
 
 config.matchWebGLToCanvasSize = false;

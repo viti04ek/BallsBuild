@@ -1,4 +1,4 @@
-const cacheName = "DefaultCompany-balls-1.0";
+const cacheName = "DefaultCompany-balls-0.1.0";
 const contentToCache = [
     "Build/Balls.loader.js",
     "Build/Balls.framework.js.unityweb",
