@@ -54,6 +54,17 @@
         return p === 'android' || p === 'ios';
       }
 
+      function updateSafeArea() {
+        var root = document.documentElement;
+        var cssSafe = parseFloat(getComputedStyle(root).getPropertyValue('--sat')) || 0;
+        var tgSafe = 0;
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp && Telegram.WebApp.safeAreaInset) {
+          tgSafe = Telegram.WebApp.safeAreaInset.top || 0;
+        }
+        var top = Math.max(cssSafe, tgSafe);
+        root.style.setProperty('--tg-safe-top', top + 'px');
+      }
+
       function updateVisibility() {
         if (!overlay) return;
         overlay.style.display = isTelegramMobile() ? 'flex' : 'none';
@@ -64,9 +75,17 @@
         var n = parseInt(count, 10);
         if (!isFinite(n)) return;
         countLabel.textContent = n + ' online';
+        updateSafeArea();
         updateVisibility();
       };
 
+      if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+        Telegram.WebApp.onEvent('safeAreaChanged', updateSafeArea);
+        Telegram.WebApp.onEvent('viewportChanged', updateSafeArea);
+      }
+      window.addEventListener('resize', updateSafeArea);
+
+      updateSafeArea();
       updateVisibility();
     })();
   </script>
