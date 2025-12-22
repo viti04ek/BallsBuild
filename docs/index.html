@@ -34,10 +34,42 @@
         </div>
       </div>
 
+      <div id="tg-online-overlay" aria-hidden="true">
+        <span id="tg-online-dot"></span>
+        <span id="tg-online-count">-- online</span>
+      </div>
+
       <div id="error-message">Unable to load the game. Please refresh the page.</div>
     </div>
   </div>
 
+  <script>
+    (function () {
+      var overlay = document.getElementById('tg-online-overlay');
+      var countLabel = document.getElementById('tg-online-count');
+
+      function isTelegramMobile() {
+        if (typeof Telegram === 'undefined' || !Telegram.WebApp) return false;
+        var p = Telegram.WebApp.platform;
+        return p === 'android' || p === 'ios';
+      }
+
+      function updateVisibility() {
+        if (!overlay) return;
+        overlay.style.display = isTelegramMobile() ? 'flex' : 'none';
+      }
+
+      window.setOnlineCount = function (count) {
+        if (!countLabel) return;
+        var n = parseInt(count, 10);
+        if (!isFinite(n)) return;
+        countLabel.textContent = n + ' online';
+        updateVisibility();
+      };
+
+      updateVisibility();
+    })();
+  </script>
   <script>
     const cacheBuster = `?v=${Date.now()}`;
     document.write(`<script src="Build/Balls.loader.js${cacheBuster}"><\/script>`);
