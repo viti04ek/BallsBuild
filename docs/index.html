@@ -8,11 +8,23 @@
   <title>Balls</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/png" href="logo.png">
-  <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    (function () {
+      var v = "0.1.0";
+      if (!v || v === "0") v = String(Date.now());
+      window.__assetVersion = v;
+      document.write('<link rel="icon" type="image/png" href="logo.png?v=' + v + '">');
+      document.write('<link rel="manifest" href="manifest.webmanifest?v=' + v + '">');
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function () {
+      var v = window.__assetVersion || String(Date.now());
+      document.write('<link rel="stylesheet" href="styles.css?v=' + v + '">');
+    })();
+  </script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/@tonconnect/ui@2.3.1/dist/tonconnect-ui.min.js"></script>
   <script src="https://unpkg.com/tonweb@0.0.66/dist/tonweb.js"></script>
@@ -25,7 +37,14 @@
       <canvas id="unity-canvas"></canvas>
 
       <div id="loader">
-        <img id="logo" src="logo.png" alt="Logo" draggable="false" />
+        <img id="logo" data-src="logo.png" alt="Logo" draggable="false" />
+        <script>
+          (function () {
+            var v = window.__assetVersion || String(Date.now());
+            var img = document.getElementById('logo');
+            if (img) img.src = img.getAttribute('data-src') + '?v=' + v;
+          })();
+        </script>
         <div id="progress-bar-wrapper">
           <div id="bubble-bar" aria-label="Loading progress">
             <div id="bubble-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
@@ -90,10 +109,65 @@
     })();
   </script>
   <script>
+    (function () {
+      var errorEl = document.getElementById('error-message');
+      if (!errorEl || !window.sessionStorage) return;
+
+      var triedKey = 'swResetAttempted';
+      var cachePrefix = "DefaultCompany-balls-";
+      var swHint = 'ServiceWorker.js';
+
+      async function resetCachesAndReload() {
+        if (sessionStorage.getItem(triedKey)) return;
+        sessionStorage.setItem(triedKey, '1');
+
+        try {
+          if ('serviceWorker' in navigator) {
+            var regs = await navigator.serviceWorker.getRegistrations();
+            for (var i = 0; i < regs.length; i++) {
+              var url = (regs[i].active && regs[i].active.scriptURL) ? regs[i].active.scriptURL : '';
+              if (url && url.indexOf(swHint) !== -1) {
+                await regs[i].unregister();
+              }
+            }
+          }
+          if ('caches' in window) {
+            var keys = await caches.keys();
+            for (var j = 0; j < keys.length; j++) {
+              if (keys[j].indexOf(cachePrefix) === 0) {
+                await caches.delete(keys[j]);
+              }
+            }
+          }
+        } catch (e) {
+          // no-op
+        }
+
+        var u = new URL(window.location.href);
+        u.searchParams.set('reload', String(Date.now()));
+        window.location.replace(u.toString());
+      }
+
+      var observer = new MutationObserver(function () {
+        var display = window.getComputedStyle(errorEl).display;
+        if (display !== 'none') {
+          resetCachesAndReload();
+        }
+      });
+
+      observer.observe(errorEl, { attributes: true, attributeFilter: ['style', 'class'] });
+    })();
+  </script>
+  <script>
     const cacheBuster = `?v=${Date.now()}`;
     document.write(`<script src="Build/Balls.loader.js${cacheBuster}"><\/script>`);
   </script>
-  <script src="unityLoader.js"></script>
+  <script>
+    (function () {
+      var v = window.__assetVersion || String(Date.now());
+      document.write('<script src="unityLoader.js?v=' + v + '"><\/script>');
+    })();
+  </script>
 </body>
 
 </html>

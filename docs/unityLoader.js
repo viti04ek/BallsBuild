@@ -2,9 +2,24 @@ let unityInstance = null;
 var unityInstanceRef = null;
 var unsubscribe = null;
 
+const SW_VERSION = 'v3';
+const SW_URL = `ServiceWorker.js?${SW_VERSION}`;
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('ServiceWorker.js').catch((err) => {
+  window.addEventListener('load', async () => {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (let i = 0; i < regs.length; i++) {
+        const url = regs[i].active?.scriptURL || '';
+        if (url.includes('ServiceWorker.js') && !url.includes(SW_URL)) {
+          await regs[i].unregister();
+        }
+      }
+    } catch (err) {
+      console.warn('Service worker cleanup failed:', err);
+    }
+
+    navigator.serviceWorker.register(SW_URL).catch((err) => {
       console.warn('Service worker registration failed:', err);
     });
   });
@@ -47,10 +62,14 @@ for (let i = 0; i < BUBBLE_COUNT; i++) {
 function showError(message){ errorBox.style.display="block"; errorBox.innerHTML=message; }
 
 const buildUrl = "Build";
+const reloadNonce = new URLSearchParams(window.location.search).get('reload') || '';
+const assetVersion = (typeof window !== 'undefined' && window.__assetVersion) ? String(window.__assetVersion) : '';
+const buildNonce = reloadNonce || assetVersion;
+const buildQuery = buildNonce ? `?v=${encodeURIComponent(buildNonce)}` : '';
 const config = {
-  dataUrl: buildUrl + "/Balls.data.unityweb",
-  frameworkUrl: buildUrl + "/Balls.framework.js.unityweb",
-  codeUrl: buildUrl + "/Balls.wasm.unityweb",
+  dataUrl: buildUrl + "/Balls.data.unityweb" + buildQuery,
+  frameworkUrl: buildUrl + "/Balls.framework.js.unityweb" + buildQuery,
+  codeUrl: buildUrl + "/Balls.wasm.unityweb" + buildQuery,
   streamingAssetsUrl: "StreamingAssets",
   companyName: "DefaultCompany",
   productName: "balls",
